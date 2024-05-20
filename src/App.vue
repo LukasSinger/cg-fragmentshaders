@@ -35,7 +35,7 @@ let data = reactive({
 function createShaderMaterial(shader, scene) {
     let material = new ShaderMaterial(shader, scene, BASE_URL + 'shaders/' + shader, {
         attributes: ['position', 'uv'],
-        uniforms: ['worldViewProjection'],
+        uniforms: ['worldViewProjection', 'time'],
         samplers: ['image']
     });
     material.backFaceCulling = false;
@@ -183,6 +183,7 @@ onMounted(() => {
     rect.material = data.materials.standard;
 
     // Animation function - called before each frame gets rendered
+    let time = 0.0;
     data.scene.onBeforeRenderObservable.add(() => {
         if (data.filter !== rect.material.name) {
             rect.material = data.materials[data.filter];
@@ -191,6 +192,10 @@ onMounted(() => {
         if (data.textures[data.selected_texture] !== null) {
             data.materials[data.filter].setTexture('image', data.textures[data.selected_texture]);
         }
+
+        let delta_time = (1.0 / 60.0) * data.scene.getAnimationRatio();
+        time += delta_time;
+        data.materials[data.filter].setFloat("time", time);
     });
 
     // Render every frame
