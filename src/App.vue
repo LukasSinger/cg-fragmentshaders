@@ -16,6 +16,7 @@ let data = reactive({
     gl: null,
     scene: null,
     filter_button: null,
+    blur_slider: null,
     filter: 'standard',
     filter_options: [
         {id: 'standard', name: 'Standard', selected: true},
@@ -23,9 +24,10 @@ let data = reactive({
         {id: 'fisheye', name: 'Fish Eye', selected: false},
         {id: 'ripple', name: 'Ripple', selected: false},
         {id: 'toon', name: 'Toonify', selected: false},
-        {id: 'custom', name: 'Custom', selected: false}
+        {id: 'blur', name: 'Gaussian Blur', selected: false}
     ],
     materials: {},
+    blur_strength: 1.0,
     selected_texture: 'video',
     textures: {video: null, webcam: null},
     start_stop: 'Stop'
@@ -35,7 +37,7 @@ let data = reactive({
 function createShaderMaterial(shader, scene) {
     let material = new ShaderMaterial(shader, scene, BASE_URL + 'shaders/' + shader, {
         attributes: ['position', 'uv'],
-        uniforms: ['worldViewProjection', 'time'],
+        uniforms: ['worldViewProjection', 'time', 'blurStrength'],
         samplers: ['image']
     });
     material.backFaceCulling = false;
@@ -48,6 +50,12 @@ function selectFilter(event) {
     let new_filter_button = document.getElementById(event.target.id + '_button');
     new_filter_button.setAttribute('selected', 'true');
     data.filter_button = new_filter_button;
+
+    if (data.filter === 'blur') {
+        data.blur_slider.classList.remove('hidden');
+    } else {
+        data.blur_slider.classList.add('hidden');
+    }
 }
 
 function toggleImageInput(event) {
@@ -107,6 +115,10 @@ function startStop(event) {
     }
 }
 
+function updateBlur(event) {
+    data.blur_strength = event.target.value / 10.0;
+}
+
 onMounted(() => {
     // Get the canvas element from the DOM
     const canvas = document.getElementById('renderCanvas');
@@ -115,6 +127,9 @@ onMounted(() => {
 
     // Set initial selected filter
     data.filter_button = document.getElementById('standard_button');
+
+    // Get blur slider
+    data.blur_slider = document.getElementById('blurSliderContainer');
 
     // Create a WebGL 2 rendering context
     data.gl = canvas.getContext('webgl2');
@@ -141,7 +156,7 @@ onMounted(() => {
     data.materials.fisheye = createShaderMaterial('fisheye', data.scene);
     data.materials.ripple = createShaderMaterial('ripple', data.scene);
     data.materials.toon = createShaderMaterial('toon', data.scene);
-    data.materials.custom = createShaderMaterial('custom', data.scene);
+    data.materials.blur = createShaderMaterial('blur', data.scene);
 
     // Create video textures
     data.textures.video = new VideoTexture('video', BASE_URL + 'videos/dm_vector.mp4', data.scene, false,
@@ -153,7 +168,7 @@ onMounted(() => {
     data.materials.fisheye.setTexture('image', data.textures.video);
     data.materials.ripple.setTexture('image', data.textures.video);
     data.materials.toon.setTexture('image', data.textures.video);
-    data.materials.custom.setTexture('image', data.textures.video);
+    data.materials.blur.setTexture('image', data.textures.video);
 
     // Create simple rectangle model
     let rect = new Mesh('rect', data.scene);
@@ -196,6 +211,8 @@ onMounted(() => {
         let delta_time = (1.0 / 60.0) * data.scene.getAnimationRatio();
         time += delta_time;
         data.materials[data.filter].setFloat("time", time);
+
+        data.materials[data.filter].setFloat("blurStrength", data.blur_strength);
     });
 
     // Render every frame
@@ -215,6 +232,15 @@ onMounted(() => {
             <p :id="f.id">{{ f.name }}</p>
         </div>
     </div>
+    <span id="blurSliderContainer" class="hidden">
+        <div class="spacer"></div>
+        <div>
+            <div class="blur-slider">
+                <label for="blurStrength">Blur Strength: </label>
+                <input id="blurStrength" type="range" value="1" min="0" max="50" style="width: 8rem;" @input="updateBlur" />
+            </div>
+        </div>
+    </span>
     <div class="spacer"></div>
     <div>
         <div id="image_toggle">
@@ -238,6 +264,12 @@ onMounted(() => {
 </template>
 
 <style scoped>
+div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 h1 {
     font-size: 1.5rem;
     font-weight: bold;
@@ -250,6 +282,10 @@ p, label {
 
 input {
     margin: 0.2rem;
+}
+
+.hidden {
+    display: none;
 }
 
 #start_stop_button {
@@ -302,6 +338,10 @@ input {
 
 .spacer {
     height: 1rem;
+}
+
+.blur-slider {
+    gap: 0.5rem;
 }
 
 .switch {
