@@ -16,7 +16,8 @@ let data = reactive({
     gl: null,
     scene: null,
     filter_button: null,
-    blur_slider: null,
+    effect_slider_container: null,
+    effect_slider: null,
     filter: 'standard',
     filter_options: [
         {id: 'standard', name: 'Standard', selected: true},
@@ -27,7 +28,7 @@ let data = reactive({
         {id: 'blur', name: 'Gaussian Blur', selected: false}
     ],
     materials: {},
-    blur_radius: null,
+    effect_strength: null,
     blur_kernel: [],
     selected_texture: 'video',
     textures: {video: null, webcam: null},
@@ -38,7 +39,7 @@ let data = reactive({
 function createShaderMaterial(shader, scene) {
     let material = new ShaderMaterial(shader, scene, BASE_URL + 'shaders/' + shader, {
         attributes: ['position', 'uv'],
-        uniforms: ['worldViewProjection', 'time', 'blurStrength'],
+        uniforms: ['worldViewProjection', 'time', 'effectStrength'],
         samplers: ['image']
     });
     material.backFaceCulling = false;
@@ -52,10 +53,16 @@ function selectFilter(event) {
     new_filter_button.setAttribute('selected', 'true');
     data.filter_button = new_filter_button;
 
-    if (data.filter === 'blur') {
-        data.blur_slider.classList.remove('hidden');
+    // Default slider values per filter
+    if (data.filter === 'blackwhite') {
+        updateStrength(50.0);
+    }
+
+    // Hide UI for standard filter
+    if (data.filter === 'standard') {
+        data.effect_slider_container.classList.add('hidden');
     } else {
-        data.blur_slider.classList.add('hidden');
+        data.effect_slider_container.classList.remove('hidden');
     }
 }
 
@@ -116,15 +123,22 @@ function startStop(event) {
     }
 }
 
-function updateBlur(event) {
-    data.blur_radius = event.target.value;
+function updateSlider(event) {
+    updateStrength(event.target.value);
+}
+
+function updateStrength(value) {
+    if (data.effect_slider.value !== value) {
+        data.effect_slider.value = value;
+    }
+    data.effect_strength = value;
     updateBlurKernel();
 }
 
 function updateBlurKernel() {
     data.blur_kernel = [];
-    const sigma = data.blur_radius / 2;
-    for (let i = -data.blur_radius; i <= data.blur_radius; i++) {
+    const sigma = data.effect_strength / 2;
+    for (let i = -data.effect_strength; i <= data.effect_strength; i++) {
         data.blur_kernel.push(1 / Math.sqrt(2 * Math.PI * sigma**2) * Math.exp(-(i ** 2) / (2*sigma**2)));
     }
 }
@@ -138,9 +152,10 @@ onMounted(() => {
     // Set initial selected filter
     data.filter_button = document.getElementById('standard_button');
 
-    // Get blur slider
-    data.blur_slider = document.getElementById('blurSliderContainer');
-    data.blur_radius = document.getElementById('blurStrength').value;
+    // Get effect slider
+    data.effect_slider_container = document.getElementById('effectSliderContainer');
+    data.effect_slider = document.getElementById('effectStrength');
+    data.effect_strength = data.effect_slider.value;
     updateBlurKernel();
 
     // Create a WebGL 2 rendering context
@@ -225,7 +240,7 @@ onMounted(() => {
         data.materials[data.filter].setFloat("time", time);
 
         data.materials[data.filter].setFloats("kernel", data.blur_kernel);
-        data.materials[data.filter].setInt("blurRadius", data.blur_radius);
+        data.materials[data.filter].setInt("effectStrength", data.effect_strength);
     });
 
     // Render every frame
@@ -245,12 +260,12 @@ onMounted(() => {
             <p :id="f.id">{{ f.name }}</p>
         </div>
     </div>
-    <span id="blurSliderContainer" class="hidden">
+    <span id="effectSliderContainer" class="hidden">
         <div class="spacer"></div>
         <div>
-            <div class="blur-slider">
-                <label for="blurStrength">Blur Strength: </label>
-                <input id="blurStrength" type="range" value="10" min="0" max="50" style="width: 8rem;" @input="updateBlur" />
+            <div class="effect-slider">
+                <label for="effectStrength">Strength: </label>
+                <input id="effectStrength" type="range" value="10" min="0" max="50" style="width: 8rem;" @input="updateSlider" />
             </div>
         </div>
     </span>
@@ -353,7 +368,7 @@ input {
     height: 1rem;
 }
 
-.blur-slider {
+.effect-slider {
     gap: 0.5rem;
 }
 
