@@ -27,7 +27,8 @@ let data = reactive({
         {id: 'blur', name: 'Gaussian Blur', selected: false}
     ],
     materials: {},
-    blur_strength: 1.0,
+    blur_radius: null,
+    blur_kernel: [],
     selected_texture: 'video',
     textures: {video: null, webcam: null},
     start_stop: 'Stop'
@@ -116,7 +117,16 @@ function startStop(event) {
 }
 
 function updateBlur(event) {
-    data.blur_strength = event.target.value / 10.0;
+    data.blur_radius = event.target.value;
+    updateBlurKernel();
+}
+
+function updateBlurKernel() {
+    data.blur_kernel = [];
+    const sigma = data.blur_radius / 2;
+    for (let i = -data.blur_radius; i <= data.blur_radius; i++) {
+        data.blur_kernel.push(1 / Math.sqrt(2 * Math.PI * sigma**2) * Math.exp(-(i ** 2) / (2*sigma**2)));
+    }
 }
 
 onMounted(() => {
@@ -130,6 +140,8 @@ onMounted(() => {
 
     // Get blur slider
     data.blur_slider = document.getElementById('blurSliderContainer');
+    data.blur_radius = document.getElementById('blurStrength').value;
+    updateBlurKernel();
 
     // Create a WebGL 2 rendering context
     data.gl = canvas.getContext('webgl2');
@@ -212,7 +224,8 @@ onMounted(() => {
         time += delta_time;
         data.materials[data.filter].setFloat("time", time);
 
-        data.materials[data.filter].setFloat("blurStrength", data.blur_strength);
+        data.materials[data.filter].setFloats("kernel", data.blur_kernel);
+        data.materials[data.filter].setInt("blurRadius", data.blur_radius);
     });
 
     // Render every frame
