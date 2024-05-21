@@ -171,7 +171,7 @@ onMounted(() => {
     data.materials.blur = createShaderMaterial('blur', data.scene);
 
     // Create video textures
-    data.textures.video = new VideoTexture('video', BASE_URL + 'videos/dm_vector.mp4', data.scene, false,
+    data.textures.video = new VideoTexture('video', BASE_URL + 'videos/billnye.mp4', data.scene, false,
                                            false, VideoTexture.BILINEAR_SAMPLINGMODE, 
                                            {autoUpdateTexture: true, autoPlay: true, loop: true, muted: true});
 
@@ -250,7 +250,7 @@ onMounted(() => {
         <div>
             <div class="blur-slider">
                 <label for="blurStrength">Blur Strength: </label>
-                <input id="blurStrength" type="range" value="1" min="0" max="50" style="width: 8rem;" @input="updateBlur" />
+                <input id="blurStrength" type="range" value="10" min="0" max="50" style="width: 8rem;" @input="updateBlur" />
             </div>
         </div>
     </span>
